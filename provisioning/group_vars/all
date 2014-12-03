@@ -1,0 +1,8 @@
+mesos_local_address: "{{ansible_eth1.ipv4.address}}"
+mesos_quorum_count: "2"
+mesos_cluster_name: "Cluster1"
+zookeeper_client_port: "2181"
+zookeeper_leader_port: "2888"
+zookeeper_election_port: "3888"
+zookeeper_url: "zk://{{ groups.masters | join(':' + zookeeper_client_port + ',') }}:{{ zookeeper_client_port }}/mesos"
+zookeeper_url_marathon: "zk://{{ groups.masters | join(':' + zookeeper_client_port + ',') }}:{{ zookeeper_client_port }}/marathon"

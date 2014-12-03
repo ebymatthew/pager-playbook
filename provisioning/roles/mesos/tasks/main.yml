@@ -1,0 +1,144 @@
+---
+# tasks file for mesos
+- name: Add Mesosphere Key
+  apt_key: keyserver=keyserver.ubuntu.com id=E56151BF
+
+- name: Add Mesosphere Repo
+  apt_repository: repo='deb http://repos.mesosphere.io/ubuntu trusty main' state=present update_cache=true
+
+- name: Set ZooKeeper URL # used for leader election amongst masters
+  copy:
+    content: "{{zookeeper_url}}"
+    dest: /etc/mesos/zk
+    mode: 0644
+
+# masters
+- name: Install Mesosphere (includes Mesos, Marathon, Zookeeper, Chronos)
+  apt: pkg=mesosphere state=installed
+  when: mesos_install_mode == "master"
+
+- name: Create Zookeeper Config File
+  template: src=zoo_cfg.j2 dest=/etc/zookeeper/conf/zoo.cfg
+  when: mesos_install_mode == "master"
+
+- name: Set Zookeeper ID
+  template: src=zoo_id.j2 dest=/etc/zookeeper/conf/myid
+  notify:
+    - Restart zookeeper
+    - Start mesos-master
+  when: mesos_install_mode == "master"
+
+- name: Disable the Mesos Slave Service
+  copy:
+    content: "manual"
+    dest: /etc/init/mesos-slave.override
+    mode: 0644
+  when: mesos_install_mode == "master"
+
+- name: Set Mesos Master Hostname
+  copy:
+    content: "{{mesos_local_address}}"
+    dest: /etc/mesos-master/hostname
+    mode: 0644
+  notify:
+    - Restart mesos-master
+  when: mesos_install_mode == "master"
+
+- name: Set Mesos Master IP
+  copy:
+    content: "{{mesos_local_address}}"
+    dest: /etc/mesos-master/ip
+    mode: 0644
+  notify:
+    - Restart mesos-master
+  when: mesos_install_mode == "master"
+
+- name: Set Mesos Master Cluster Name
+  copy:
+    content: "{{mesos_cluster_name}}"
+    dest: /etc/mesos-master/cluster
+    mode: 0644
+  notify:
+    - Restart mesos-master
+  when: mesos_install_mode == "master"
+
+- name: Set Mesos Master Quorum Count
+  copy:
+    content: "{{mesos_quorum_count}}"
+    dest: /etc/mesos-master/quorum
+    mode: 0644
+  notify:
+    - Restart mesos-master
+  when: mesos_install_mode == "master"
+
+- name: Assures /etc/marathon/conf dir exists
+  file: path=/etc/marathon/conf state=directory
+  
+- name: Set Marathon Hostname
+  copy:
+    content: "{{mesos_local_address}}"
+    dest: /etc/marathon/conf/hostname
+    mode: 0644
+  when: mesos_install_mode == "master"
+
+- name: Set Marthon Master
+  copy:
+    content: "{{zookeeper_url}}"
+    dest: /etc/marathon/conf/master
+    mode: 0644
+  when: mesos_install_mode == "master"
+
+- name: Set Marthon Zookeeper
+  copy:
+    content: "{{zookeeper_url_marathon}}"
+    dest: /etc/marathon/conf/zk
+    mode: 0644
+  when: mesos_install_mode == "master"
+
+# slaves
+- name: Install Mesos
+  apt: pkg=mesos state=installed
+  when: mesos_install_mode == "slave"
+
+- name: Disable the Mesos Master Service
+  copy:
+    content: "manual"
+    dest: /etc/init/mesos-master.override
+    mode: 0644
+  when: mesos_install_mode == "slave"
+
+- name: Disable the ZooKeeper Service
+  copy:
+    content: "manual"
+    dest: /etc/init/zookeeper.override
+    mode: 0644
+  notify:
+    - Stop zookeeper
+  when: mesos_install_mode == "slave"
+
+- name: Set Mesos Slave Isolation
+  copy:
+    content: "cgroups/cpu,cgroups/mem"
+    dest: /etc/mesos-slave/isolation
+    mode: 0644
+  notify:
+    - Start mesos-slave
+  when: mesos_install_mode == "slave"
+
+- name: Set Mesos Slave Hostname
+  copy:
+    content: "{{mesos_local_address}}"
+    dest: /etc/mesos-slave/hostname
+    mode: 0644
+  notify:
+    - Restart mesos-slave
+  when: mesos_install_mode == "slave"
+
+- name: Set Mesos Slave IP
+  copy:
+    content: "{{mesos_local_address}}"
+    dest: /etc/mesos-slave/ip
+    mode: 0644
+  notify:
+    - Restart mesos-slave
+  when: mesos_install_mode == "slave"

@@ -1,0 +1,11 @@
+- name: deploy and configure the mesos masters
+  hosts: masters
+  sudo: True
+  roles:
+    - { role: mesos, mesos_install_mode: "master" }
+
+- name: deploy and configure the mesos slaves
+  hosts: slaves
+  sudo: True
+  roles:
+    - { role: mesos, mesos_install_mode: "slave" }
