@@ -6,6 +6,9 @@
 - name: Add Mesosphere Repo
   apt_repository: repo='deb http://repos.mesosphere.io/ubuntu trusty main' state=present update_cache=true
 
+- name: Assures /etc/mesos dir exists
+  file: path=/etc/mesos state=directory
+
 - name: Set ZooKeeper URL # used for leader election amongst masters
   copy:
     content: "{{zookeeper_url}}"
@@ -98,6 +101,14 @@
 # slaves
 - name: Install Mesos
   apt: pkg=mesos state=installed
+  when: mesos_install_mode == "slave"
+
+- name: Install Docker
+  apt: pkg=docker.io state=installed
+  when: mesos_install_mode == "slave"
+
+- name: Add User Vagrant to Docker groups
+  user: name=vagrant groups=docker append=yes
   when: mesos_install_mode == "slave"
 
 - name: Disable the Mesos Master Service
